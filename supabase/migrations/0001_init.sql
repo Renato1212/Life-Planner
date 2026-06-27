@@ -102,13 +102,27 @@ create table if not exists user_google_tokens (
   updated_at timestamptz not null default now()
 );
 
+-- GOOGLE EVENTS (cache of events pulled FROM Google, shown in Schedule) -------
+create table if not exists google_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  google_event_id text not null,
+  summary text,
+  start_at timestamptz,
+  end_at timestamptz,
+  status text,            -- 'confirmed' | 'cancelled'
+  from_quadrante boolean not null default false,
+  updated_at timestamptz not null default now(),
+  unique (user_id, google_event_id)
+);
+
 -- ROW LEVEL SECURITY ---------------------------------------------------------
 do $$
 declare t text;
 begin
   foreach t in array array[
     'areas','goals','tasks','habits','habit_logs',
-    'area_scores','reviews','user_google_tokens'
+    'area_scores','reviews','user_google_tokens','google_events'
   ] loop
     execute format('alter table %I enable row level security;', t);
     execute format($f$

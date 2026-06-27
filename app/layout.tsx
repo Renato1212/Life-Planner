@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 import { TabBar } from "@/components/TabBar";
+import { AuthGate } from "@/components/AuthGate";
 
 export const metadata: Metadata = {
   title: "Quadrante — Personal Life OS",
@@ -47,10 +48,12 @@ export default function RootLayout({
       </head>
       <body className="min-h-dvh">
         <Providers>
-          <main className="mx-auto max-w-2xl px-4 pb-28 pt-safe">
-            {children}
-          </main>
-          <TabBar />
+          <AuthGate>
+            <main className="mx-auto max-w-2xl px-4 pb-28 pt-safe">
+              {children}
+            </main>
+            <TabBar />
+          </AuthGate>
         </Providers>
       </body>
     </html>

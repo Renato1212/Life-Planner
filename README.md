@@ -64,9 +64,11 @@ everything.
 
 ## Optional: connect Supabase + Google Calendar
 
-The app ships with a local-storage data layer so it works immediately. The
-schema and types are already designed for Supabase, so promoting it to a
-real backend is additive, not a rewrite. See `CLAUDE.md` for the architecture.
+The full backend — Supabase auth/DB and two-way Google Calendar sync — is
+**already implemented and env-gated**. With no env vars the app runs in local
+mode; the moment you add the Supabase vars (and sign in), the store switches to
+Postgres and Calendar sync activates. No code changes needed. See `CLAUDE.md`
+for the architecture.
 
 ### 1. Supabase
 
@@ -77,8 +79,8 @@ real backend is additive, not a rewrite. See `CLAUDE.md` for the architecture.
 3. Set env vars (see `.env.local.example`):
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY` (server only — never exposed to the client)
-4. Swap the body of `lib/store.tsx` for Supabase queries. The `useStore()` API
-   stays identical, so the UI needs no changes.
+4. That's it — the store auto-switches to Supabase. On first sign-in your four
+   areas and starting data are seeded server-side (idempotent).
 
 ### 2. Google Cloud Console (OAuth + Calendar)
 

@@ -25,20 +25,22 @@ The four areas are seeded but **fully editable** (name / color / icon).
 
 ## Data layer — important
 
-The app currently persists to **`localStorage`** through a single typed store
-(`lib/store.tsx`). This makes it instantly usable and installable as a PWA with
-zero backend setup.
+The store (`lib/store.tsx`) has **two interchangeable backends behind one
+identical React API** (`useStore()`):
 
-`lib/types.ts` mirrors the planned **Supabase schema 1:1**
-(`supabase/migrations/0001_init.sql`). To move to Supabase:
+- **`local`** (default) — `localStorage`. Zero setup, instantly usable, PWA-able.
+- **`supabase`** — Postgres via Supabase. Activates automatically when
+  `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set and a user
+  is signed in. Mutations optimistically update the in-memory snapshot and write
+  through to Supabase (`lib/supabase/repository.ts`); structural adds refetch to
+  pick up server-generated UUIDs.
 
-1. Run the migration; it enables RLS on every table (owner = `auth.uid()`).
-2. Replace the body of `lib/store.tsx` with Supabase queries — the React API
-   surface (`useStore()` and its methods) stays identical, so **no UI changes**.
-3. Add Google OAuth + Calendar sync (see "Planned backend" below).
+`MODE` is chosen once from env (`lib/supabase/env.ts`). The UI never branches on
+mode. `lib/types.ts` mirrors the schema (`supabase/migrations/0001_init.sql`)
+1:1, so column mapping is a pass-through (plus `user_id` on writes).
 
 Do not change `lib/types.ts` field names without updating both the migration
-and the store.
+and the repository.
 
 ## Folder structure
 
@@ -94,21 +96,38 @@ read the historical snapshots.
 - Calm palette, no neon. Area colors: Spiritual `#8B7FD6`, Wealth `#3E9B7A`,
   Health `#E08A5B`, Relationship `#D97291`.
 
-## Planned backend (not yet wired)
+## Backend (implemented, env-gated)
 
-- **Auth:** Supabase Auth, Google only. Scopes: `openid email profile` +
-  `https://www.googleapis.com/auth/calendar.events`. Pass
-  `access_type=offline&prompt=consent` to get a refresh token. Capture
-  `provider_refresh_token` on callback and store in `user_google_tokens`.
-- **Calendar App→Google:** on `scheduled_start/end`, create event, store
-  `google_event_id` + `last_synced_at`; edits/completes update/delete.
-- **Calendar Google→App:** incremental sync via `events.list` + `syncToken`;
-  full re-sync on 410. Manual "Sync now" + Vercel Cron (~15 min).
-- **Tokens:** server-side only; mint access tokens from the stored refresh
-  token per request. Last-write-wins; skip echo updates via `last_synced_at`.
+All wired; activates when env vars are present. Files:
+
+- **Auth** — Supabase Auth, Google only (`app/login/page.tsx`,
+  `components/AuthGate.tsx`). Scopes `openid email profile` +
+  `.../auth/calendar.events`, with `access_type=offline&prompt=consent` for a
+  refresh token. `app/auth/callback/route.ts` exchanges the code and stores
+  `provider_refresh_token` in `user_google_tokens` (once). `middleware.ts`
+  refreshes the session cookie.
+- **Supabase clients** — `lib/supabase/{client,server,env}.ts` (browser,
+  server+admin, env flag). All return `null` when unconfigured.
+- **Calendar App→Google** — `lib/google/calendar.ts` + `lib/google/sync.ts`:
+  on `scheduled_start`, create event + store `google_event_id`/`last_synced_at`;
+  complete/unschedule deletes; otherwise updates. Per-area `colorId`.
+- **Calendar Google→App** — incremental `events.list` + `syncToken`, 410 →
+  full re-sync; pulled events cached in `google_events` (tagged
+  `from_quadrante`).
+- **Triggers** — manual `POST /api/sync` (Schedule "Sync" button) and
+  `GET /api/cron/sync` (Vercel Cron every 15 min, `vercel.json`, guarded by
+  `CRON_SECRET`).
+- **Tokens** — server-side only; googleapis mints access tokens from the stored
+  refresh token. Skip echoes via `extendedProperties.private.quadrante`.
+
+To go live: create a Supabase project + run the migration, create a Google
+OAuth client, set the env vars (`.env.local.example`), enable Google in Supabase
+Auth. See README "Optional: connect Supabase + Google Calendar".
 
 ## TODO (later, do not build yet)
 
+- Surface `google_events` in the Schedule view UI (data + sync are ready; the
+  Schedule page currently lists Quadrante-scheduled tasks only).
 - `events.watch` push notifications for real-time Calendar sync.
 - PT-PT locale via `next-intl` (UI strings are English now; keep them
   centralizable when i18n is added).

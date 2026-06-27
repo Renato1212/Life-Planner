@@ -18,7 +18,7 @@ import { cn, haptic } from "@/lib/utils";
 import type { Task } from "@/lib/types";
 
 export default function SchedulePage() {
-  const { db, ready } = useStore();
+  const { db, ready, mode } = useStore();
   const { show } = useToast();
   const [anchor, setAnchor] = useState(new Date());
   const [selected, setSelected] = useState(new Date());
@@ -38,9 +38,21 @@ export default function SchedulePage() {
         (a.scheduled_start ?? "").localeCompare(b.scheduled_start ?? ""),
       );
 
-  const syncNow = () => {
+  const syncNow = async () => {
     haptic(12);
-    show("Connect Google Calendar to sync (see README)");
+    if (mode !== "supabase") {
+      show("Connect Google Calendar to sync (see README)");
+      return;
+    }
+    show("Syncing…");
+    try {
+      const res = await fetch("/api/sync", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "failed");
+      show(`Synced · ${data.pushed} sent, ${data.pulled} pulled`);
+    } catch {
+      show("Sync failed — check your connection");
+    }
   };
 
   return (
