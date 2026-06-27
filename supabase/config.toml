@@ -1,0 +1,17 @@
+# Supabase project config. Lets the Supabase CLI and the GitHub integration
+# recognise this repo as a project and auto-apply supabase/migrations/*.sql.
+project_id = "quadrante"
+
+[db]
+major_version = 15
+
+[auth]
+# Set your deployed URL here (and in the dashboard) once known.
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+
+[auth.external.google]
+enabled = true
+client_id = "env(GOOGLE_CLIENT_ID)"
+secret = "env(GOOGLE_CLIENT_SECRET)"
+# Calendar scope is requested from the app at sign-in (see app/login/page.tsx).
