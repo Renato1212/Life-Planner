@@ -4,14 +4,16 @@ import { Providers } from "./providers";
 import { TabBar } from "@/components/TabBar";
 import { AuthGate } from "@/components/AuthGate";
 
+const BP = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export const metadata: Metadata = {
   title: "Quadrante — Personal Life OS",
   description:
     "Plan, track, and improve across your four life areas: Spiritual, Wealth, Health, Relationship.",
-  manifest: "/manifest.webmanifest",
+  manifest: `${BP}/manifest.webmanifest`,
   icons: {
-    icon: "/icons/icon-192.png",
-    apple: "/icons/apple-touch-icon.png",
+    icon: `${BP}/icons/icon-192.png`,
+    apple: `${BP}/icons/apple-touch-icon.png`,
   },
   appleWebApp: {
     capable: true,
