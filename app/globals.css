@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 242 242 247; /* iOS systemGroupedBackground */
+  --surface: 255 255 255;
+  --surface-2: 248 248 250;
+  --border: 229 229 234;
+  --ink: 17 17 19;
+  --ink-2: 60 60 67;
+  --ink-3: 142 142 147;
+  --tint: 90 90 200; /* blended brand violet */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.dark {
+  --bg: 0 0 0;
+  --surface: 28 28 30;
+  --surface-2: 44 44 46;
+  --border: 56 56 58;
+  --ink: 255 255 255;
+  --ink-2: 235 235 245;
+  --ink-3: 152 152 159;
+  --tint: 130 130 240;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--ink));
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+/* Hide scrollbars but keep scrollability (iOS feel) */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Frosted glass nav */
+.glass {
+  background-color: rgb(var(--surface) / 0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+/* Large iOS title spring */
+@layer utilities {
+  .pt-safe {
+    padding-top: var(--safe-top);
+  }
+  .pb-safe {
+    padding-bottom: var(--safe-bottom);
+  }
+  .min-h-dvh {
+    min-height: 100dvh;
+  }
+  .active-press {
+    transition: transform 0.12s cubic-bezier(0.32, 0.72, 0, 1),
+      opacity 0.12s ease;
+  }
+  .active-press:active {
+    transform: scale(0.96);
+    opacity: 0.85;
+  }
+  .tappable {
+    touch-action: manipulation;
+    user-select: none;
+  }
+}
+
+/* Range/progress smoothness */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 28px;
+  width: 28px;
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  margin-top: -11px;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: rgb(var(--border));
+}
