@@ -31,51 +31,93 @@ export function TaskRow({
   onEdit?: (t: Task) => void;
   accent?: string;
 }) {
-  const { cycleTaskStatus } = useStore();
+  const { cycleTaskStatus, toggleSubtask } = useStore();
   const done = task.status === "done";
+  const subs = task.subtasks ?? [];
+  const subsDone = subs.filter((s) => s.done).length;
   return (
-    <div className="flex items-center gap-3 py-2.5">
-      <button
-        onClick={() => {
-          haptic();
-          cycleTaskStatus(task.id);
-        }}
-        className={cn(
-          "tappable active-press grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 transition-colors",
-          statusRing[task.status],
-        )}
-        aria-label="Cycle status"
-      >
-        {done && <Icon name="Check" size={15} className="text-white" strokeWidth={3} />}
-        {task.status === "doing" && (
-          <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-        )}
-      </button>
-      <button
-        onClick={() => onEdit?.(task)}
-        className="tappable min-w-0 flex-1 text-left"
-      >
-        <div
+    <div className="py-2.5">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => {
+            haptic();
+            cycleTaskStatus(task.id);
+          }}
           className={cn(
-            "truncate text-[16px] font-medium text-ink",
-            done && "text-ink-3 line-through",
+            "tappable active-press grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 transition-colors",
+            statusRing[task.status],
           )}
+          aria-label="Cycle status"
         >
-          {task.title}
-        </div>
-        {(task.notes || task.due_date) && (
-          <div className="truncate text-[13px] text-ink-3">
-            {task.notes}
-            {task.notes && task.due_date ? " · " : ""}
-            {task.due_date ? `Due ${task.due_date}` : ""}
+          {done && <Icon name="Check" size={15} className="text-white" strokeWidth={3} />}
+          {task.status === "doing" && (
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+          )}
+        </button>
+        <button
+          onClick={() => onEdit?.(task)}
+          className="tappable min-w-0 flex-1 text-left"
+        >
+          <div
+            className={cn(
+              "truncate text-[16px] font-medium text-ink",
+              done && "text-ink-3 line-through",
+            )}
+          >
+            {task.title}
           </div>
-        )}
-      </button>
-      <span
-        className="h-2.5 w-2.5 shrink-0 rounded-full"
-        style={{ background: priorityColor[task.priority] }}
-        title={`${task.priority} priority`}
-      />
+          <div className="flex items-center gap-1.5 truncate text-[13px] text-ink-3">
+            {subs.length > 0 && (
+              <span className="inline-flex items-center gap-1 font-medium">
+                <Icon name="ListTree" size={12} />
+                {subsDone}/{subs.length}
+              </span>
+            )}
+            {subs.length > 0 && (task.notes || task.due_date) && <span>·</span>}
+            {(task.notes || task.due_date) && (
+              <span className="truncate">
+                {task.notes}
+                {task.notes && task.due_date ? " · " : ""}
+                {task.due_date ? `Due ${task.due_date}` : ""}
+              </span>
+            )}
+          </div>
+        </button>
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ background: priorityColor[task.priority] }}
+          title={`${task.priority} priority`}
+        />
+      </div>
+
+      {subs.length > 0 && (
+        <div className="ml-10 mt-1 space-y-0.5">
+          {subs.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => {
+                haptic();
+                toggleSubtask(task.id, s.id);
+              }}
+              className="tappable flex w-full items-center gap-2 py-0.5 text-left"
+            >
+              <Icon
+                name={s.done ? "SquareCheck" : "Square"}
+                size={17}
+                className={s.done ? "text-tint" : "text-ink-3"}
+              />
+              <span
+                className={cn(
+                  "text-[14px]",
+                  s.done ? "text-ink-3 line-through" : "text-ink-2",
+                )}
+              >
+                {s.title}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

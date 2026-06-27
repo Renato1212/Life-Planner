@@ -8,6 +8,7 @@ import { cn, haptic } from "@/lib/utils";
 const TABS = [
   { href: "/", label: "Home", icon: "Home" },
   { href: "/today", label: "Today", icon: "ListChecks" },
+  { href: "/routine", label: "Day", icon: "Sunrise" },
   { href: "/schedule", label: "Schedule", icon: "CalendarDays" },
   { href: "/review", label: "Review", icon: "TrendingUp" },
 ];

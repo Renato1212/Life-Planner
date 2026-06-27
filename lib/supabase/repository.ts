@@ -1,5 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DB, Goal, Task, Habit, Review, Area } from "@/lib/types";
+import type {
+  DB,
+  Goal,
+  Task,
+  Habit,
+  Review,
+  Area,
+  RoutineBlock,
+} from "@/lib/types";
 import { buildSeed } from "@/lib/seed";
 
 // Maps the store's operations onto Supabase tables. Every row carries user_id;
@@ -14,20 +22,29 @@ const TABLES = [
   "habit_logs",
   "area_scores",
   "reviews",
+  "routine_blocks",
 ] as const;
 
 export async function fetchAll(
   sb: SupabaseClient,
   userId: string,
 ): Promise<DB> {
-  const [areas, goals, tasks, habits, habit_logs, area_scores, reviews] =
-    await Promise.all(
-      TABLES.map((t) =>
-        sb.from(t).select("*").eq("user_id", userId).then((r) => r.data ?? []),
-      ),
-    );
+  const [
+    areas,
+    goals,
+    tasks,
+    habits,
+    habit_logs,
+    area_scores,
+    reviews,
+    routine_blocks,
+  ] = await Promise.all(
+    TABLES.map((t) =>
+      sb.from(t).select("*").eq("user_id", userId).then((r) => r.data ?? []),
+    ),
+  );
   return {
-    version: 1,
+    version: 2,
     areas: areas as Area[],
     goals: goals as Goal[],
     tasks: tasks as Task[],
@@ -35,6 +52,7 @@ export async function fetchAll(
     habit_logs: habit_logs as DB["habit_logs"],
     area_scores: area_scores as DB["area_scores"],
     reviews: reviews as Review[],
+    routine_blocks: routine_blocks as RoutineBlock[],
   };
 }
 
@@ -180,4 +198,18 @@ export const repo = {
         rows.map((r) => ({ ...r, user_id: uid })),
         { onConflict: "area_id,week_start" },
       ),
+
+  addRoutineBlock: (
+    sb: SupabaseClient,
+    uid: string,
+    b: Partial<RoutineBlock>,
+  ) => sb.from("routine_blocks").insert({ ...b, ...u(uid) }),
+  updateRoutineBlock: (
+    sb: SupabaseClient,
+    _u: string,
+    id: string,
+    p: Partial<RoutineBlock>,
+  ) => sb.from("routine_blocks").update(p).eq("id", id),
+  deleteRoutineBlock: (sb: SupabaseClient, _u: string, id: string) =>
+    sb.from("routine_blocks").delete().eq("id", id),
 };

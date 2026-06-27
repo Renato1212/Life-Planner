@@ -28,6 +28,12 @@ import {
   Circle,
   CircleDot,
   Dot,
+  Sunrise,
+  Square,
+  SquareCheck,
+  CornerDownRight,
+  GripVertical,
+  ListTree,
   type LucideIcon,
 } from "lucide-react";
 
@@ -59,6 +65,12 @@ const MAP: Record<string, LucideIcon> = {
   Circle,
   CircleDot,
   Dot,
+  Sunrise,
+  Square,
+  SquareCheck,
+  CornerDownRight,
+  GripVertical,
+  ListTree,
 };
 
 export function Icon({

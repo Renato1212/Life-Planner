@@ -1,11 +1,10 @@
-import type { DB, Area, Goal, Task, Habit } from "./types";
+import type { DB, Area, Goal, Task, Habit, RoutineBlock } from "./types";
 import { uid } from "./utils";
 
 const now = () => new Date().toISOString();
 
-// Stable IDs for the four seeded areas so deep links are predictable.
+// Stable IDs for the seeded areas so deep links are predictable.
 const AREA_IDS = {
-  spiritual: "area_spiritual",
   wealth: "area_wealth",
   health: "area_health",
   relationship: "area_relationship",
@@ -14,21 +13,12 @@ const AREA_IDS = {
 export function buildSeed(): DB {
   const areas: Area[] = [
     {
-      id: AREA_IDS.spiritual,
-      name: "Spiritual",
-      slug: "spiritual",
-      color: "#8B7FD6",
-      icon: "Sparkles",
-      sort_order: 0,
-      created_at: now(),
-    },
-    {
       id: AREA_IDS.wealth,
       name: "Wealth",
       slug: "wealth",
       color: "#3E9B7A",
       icon: "Wallet",
-      sort_order: 1,
+      sort_order: 0,
       created_at: now(),
     },
     {
@@ -37,7 +27,7 @@ export function buildSeed(): DB {
       slug: "health",
       color: "#E08A5B",
       icon: "HeartPulse",
-      sort_order: 2,
+      sort_order: 1,
       created_at: now(),
     },
     {
@@ -46,7 +36,7 @@ export function buildSeed(): DB {
       slug: "relationship",
       color: "#D97291",
       icon: "Users",
-      sort_order: 3,
+      sort_order: 2,
       created_at: now(),
     },
   ];
@@ -205,7 +195,7 @@ export function buildSeed(): DB {
   });
 
   return {
-    version: 1,
+    version: 2,
     areas,
     goals,
     tasks,
@@ -213,5 +203,37 @@ export function buildSeed(): DB {
     habit_logs: [],
     area_scores: [],
     reviews: [],
+    routine_blocks: [],
   };
+}
+
+// A sensible starter "normal working day" the user can apply with one tap and
+// then refine over time. Areas are matched by slug from the live DB.
+export function defaultDayBlocks(
+  areaBySlug: (slug: string) => string | undefined,
+): Omit<RoutineBlock, "id" | "created_at">[] {
+  const W = areaBySlug("wealth") ?? null;
+  const H = areaBySlug("health") ?? null;
+  const R = areaBySlug("relationship") ?? null;
+  const rows: [string, string, string | null, string | null, string | null][] = [
+    ["Wake & morning routine", "06:30", "07:00", H, null],
+    ["Plan the day", "07:00", "07:30", null, "Review today's tasks & blueprint"],
+    ["Trading / deep work", "08:00", "12:00", W, "Highest-focus block"],
+    ["Lunch", "12:00", "13:00", H, null],
+    ["Work / follow-ups", "13:00", "16:00", W, null],
+    ["Exercise", "16:00", "17:00", H, "After trading"],
+    ["Train ride home", "17:00", "17:45", null, "Reading / podcast"],
+    ["Family time", "18:00", "20:00", R, "Benjamim & Deysi"],
+    ["Dinner", "20:00", "20:45", H, null],
+    ["Wind down", "20:45", "21:30", null, "Screens off, reflect"],
+    ["Sleep", "21:30", null, H, "Target bedtime"],
+  ];
+  return rows.map(([title, start, end, area_id, note], i) => ({
+    title,
+    start_time: start,
+    end_time: end,
+    area_id,
+    note,
+    sort_order: i,
+  }));
 }

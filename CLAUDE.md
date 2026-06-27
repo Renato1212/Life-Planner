@@ -4,13 +4,22 @@ Source of truth for the project. Keep this updated as the app evolves.
 
 ## What this is
 
-A single-user personal life-management app organized around **four life areas**:
-**Spiritual · Wealth · Health · Relationship**. You plan (goals), act (tasks),
-build consistency (habits), and **see improvement over time** (scores, Life
-Wheel, trends, weekly review). A Schedule view shows time-blocked tasks and is
-designed to sync two-way with Google Calendar.
+A single-user personal life-management app organized around **three life areas**:
+**Wealth · Health · Relationship**. You plan (goals), act (tasks), build
+consistency (habits), and **see improvement over time** (scores, Life Wheel,
+trends, weekly review). A Schedule view shows time-blocked tasks and is designed
+to sync two-way with Google Calendar.
 
-The four areas are seeded but **fully editable** (name / color / icon).
+Two more building blocks:
+- **Daily Blueprint** (`/routine`) — define your "normal working day" as
+  time-blocks once, refine over time; a **"Right now"** card (on Today) surfaces
+  the active block so you always know what to do when nothing is scheduled.
+- **Subtasks** — tasks carry an inline checklist (`task.subtasks`), checkable
+  in-row and in the editor.
+
+The areas are seeded but **fully editable** (name / color / icon). (A 4th area,
+Spiritual, was removed; `migrate()` in the store drops it from existing saved
+data.)
 
 ## Stack
 
@@ -93,8 +102,8 @@ read the historical snapshots.
   on tappables, light haptics, safe-area insets, bottom-sheet modals.
 - One clear primary action per surface (FAB on area pages).
 - Mobile-first; `max-w-2xl` keeps it centered and comfortable on desktop too.
-- Calm palette, no neon. Area colors: Spiritual `#8B7FD6`, Wealth `#3E9B7A`,
-  Health `#E08A5B`, Relationship `#D97291`.
+- Calm palette, no neon. Area colors: Wealth `#3E9B7A`, Health `#E08A5B`,
+  Relationship `#D97291`.
 
 ## Backend (implemented, env-gated)
 

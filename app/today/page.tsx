@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useStore } from "@/lib/store";
 import { isHabitDoneOn } from "@/lib/scoring";
-import { todayISO, format } from "@/lib/date";
+import { currentRoutineBlock, activeScheduledTask } from "@/lib/routine";
+import { todayISO, format, fmtTime } from "@/lib/date";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, Ring } from "@/components/ui";
 import { Icon } from "@/components/Icon";
@@ -62,6 +64,8 @@ export default function TodayPage() {
           </p>
         </div>
       </Card>
+
+      <RightNow />
 
       {/* Habits */}
       <SectionTitle icon="Repeat" label="Habits" />
@@ -148,5 +152,74 @@ function SectionTitle({ icon, label }: { icon: string; label: string }) {
 function EmptyMini({ text }: { text: string }) {
   return (
     <Card className="px-4 py-6 text-center text-[14px] text-ink-3">{text}</Card>
+  );
+}
+
+// "Right now" — what to focus on at this moment. Prefers an active scheduled
+// task; otherwise falls back to the Daily Blueprint routine block.
+function RightNow() {
+  const { db } = useStore();
+  const areaById = (id?: string | null) =>
+    id ? db.areas.find((a) => a.id === id) : undefined;
+
+  const task = activeScheduledTask(db);
+  const { block, upcoming } = currentRoutineBlock(db);
+
+  // Nothing set up yet → nudge to build the blueprint.
+  if (!task && !block && db.routine_blocks.length === 0) {
+    return (
+      <Link href="/routine">
+        <Card className="mt-4 flex items-center gap-3 p-4 active-press tappable cursor-pointer">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-tint/10 text-tint">
+            <Icon name="Sunrise" size={20} />
+          </span>
+          <div className="flex-1">
+            <p className="text-[15px] font-semibold text-ink">
+              Set up your working day
+            </p>
+            <p className="text-[13px] text-ink-3">
+              Build a base routine so you always know what to do next.
+            </p>
+          </div>
+          <Icon name="ChevronRight" size={18} className="text-ink-3" />
+        </Card>
+      </Link>
+    );
+  }
+
+  const label = task ? "Right now" : upcoming ? "Up next" : "Right now";
+  const color = task
+    ? areaById(task.area_id)?.color
+    : areaById(block?.area_id)?.color;
+  const title = task ? task.title : block?.title;
+  const sub = task
+    ? `${task.scheduled_start ? fmtTime(task.scheduled_start.slice(11, 16)) : ""} · scheduled task`
+    : block
+      ? `${fmtTime(block.start_time)}${block.end_time ? ` – ${fmtTime(block.end_time)}` : ""}${block.note ? ` · ${block.note}` : ""}`
+      : "";
+
+  return (
+    <Card className="mt-4 p-4">
+      <div className="flex items-center justify-between">
+        <p className="text-[12px] font-semibold uppercase tracking-wide text-tint">
+          {label}
+        </p>
+        {!task && (
+          <span className="text-[11px] font-medium text-ink-3">
+            from your blueprint
+          </span>
+        )}
+      </div>
+      <div className="mt-1 flex items-center gap-3">
+        <span
+          className="h-10 w-1.5 rounded-full"
+          style={{ background: color ?? "rgb(var(--tint))" }}
+        />
+        <div className="flex-1">
+          <p className="text-[19px] font-bold text-ink">{title}</p>
+          <p className="text-[13px] text-ink-3">{sub}</p>
+        </div>
+      </div>
+    </Card>
   );
 }

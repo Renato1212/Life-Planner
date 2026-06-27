@@ -17,8 +17,9 @@ import type {
   Habit,
   AreaScore,
   Review,
+  RoutineBlock,
 } from "./types";
-import { buildSeed } from "./seed";
+import { buildSeed, defaultDayBlocks } from "./seed";
 import { uid } from "./utils";
 import { isoDate, weekStartISO, todayISO, addDays } from "./date";
 import { computeAreaScore } from "./scoring";
@@ -39,6 +40,36 @@ const STORAGE_KEY = "quadrante.db.v1";
 
 const MODE: "local" | "supabase" = SUPABASE_ENABLED ? "supabase" : "local";
 
+// Forward-migrate an older saved DB: drop the removed Spiritual area, and
+// backfill new fields (routine_blocks, task.subtasks) so existing users get
+// the new features without losing their data.
+function migrate(db: DB): DB {
+  let changed = false;
+  const next: DB = { ...db };
+
+  const spiritual = next.areas.find((a) => a.slug === "spiritual");
+  if (spiritual) {
+    next.areas = next.areas.filter((a) => a.id !== spiritual.id);
+    next.goals = next.goals.filter((g) => g.area_id !== spiritual.id);
+    next.tasks = next.tasks.filter((t) => t.area_id !== spiritual.id);
+    next.habits = next.habits.filter((h) => h.area_id !== spiritual.id);
+    next.area_scores = next.area_scores.filter(
+      (s) => s.area_id !== spiritual.id,
+    );
+    changed = true;
+  }
+  if (!Array.isArray(next.routine_blocks)) {
+    next.routine_blocks = [];
+    changed = true;
+  }
+  next.tasks = next.tasks.map((t) =>
+    t.subtasks ? t : { ...t, subtasks: [] },
+  );
+
+  if (changed || next.version < 2) next.version = 2;
+  return next;
+}
+
 function loadLocal(): DB {
   if (typeof window === "undefined") return buildSeed();
   try {
@@ -48,7 +79,9 @@ function loadLocal(): DB {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
       return seed;
     }
-    return JSON.parse(raw) as DB;
+    const migrated = migrate(JSON.parse(raw) as DB);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+    return migrated;
   } catch {
     return buildSeed();
   }
@@ -61,7 +94,7 @@ function persistLocal(db: DB) {
 
 function emptyDB(): DB {
   return {
-    version: 1,
+    version: 2,
     areas: [],
     goals: [],
     tasks: [],
@@ -69,6 +102,7 @@ function emptyDB(): DB {
     habit_logs: [],
     area_scores: [],
     reviews: [],
+    routine_blocks: [],
   };
 }
 
@@ -85,6 +119,7 @@ interface StoreApi {
   updateTask: (id: string, patch: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   cycleTaskStatus: (id: string) => void;
+  toggleSubtask: (taskId: string, subtaskId: string) => void;
   addHabit: (h: Omit<Habit, "id" | "created_at">) => void;
   updateHabit: (id: string, patch: Partial<Habit>) => void;
   deleteHabit: (id: string) => void;
@@ -93,6 +128,11 @@ interface StoreApi {
   snapshotScores: () => void;
   simulateHistory: () => void;
   resetDemo: () => void;
+  // Daily Blueprint (routine)
+  addRoutineBlock: (b: Omit<RoutineBlock, "id" | "created_at">) => void;
+  updateRoutineBlock: (id: string, patch: Partial<RoutineBlock>) => void;
+  deleteRoutineBlock: (id: string) => void;
+  applyDefaultDay: () => void;
 }
 
 const StoreContext = createContext<StoreApi | null>(null);
@@ -305,6 +345,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [commit, wt],
   );
 
+  const toggleSubtask = useCallback(
+    (taskId: string, subtaskId: string) => {
+      const task = dbRef.current.tasks.find((t) => t.id === taskId);
+      if (!task) return;
+      const subtasks = (task.subtasks ?? []).map((s) =>
+        s.id === subtaskId ? { ...s, done: !s.done } : s,
+      );
+      commit({
+        ...dbRef.current,
+        tasks: dbRef.current.tasks.map((t) =>
+          t.id === taskId ? { ...t, subtasks } : t,
+        ),
+      });
+      wt((sb, u) => repo.updateTask(sb!, u, taskId, { subtasks }));
+    },
+    [commit, wt],
+  );
+
   const addHabit = useCallback(
     (h: Omit<Habit, "id" | "created_at">) => {
       if (MODE === "supabase") {
@@ -463,6 +521,76 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     commit(buildSeed());
   }, [commit, reload]);
 
+  // ── Daily Blueprint (routine) ────────────────────────────────────
+  const addRoutineBlock = useCallback(
+    (b: Omit<RoutineBlock, "id" | "created_at">) => {
+      if (MODE === "supabase") {
+        wt(async (sb, u) => {
+          await repo.addRoutineBlock(sb!, u, b);
+          await reload();
+        });
+        return;
+      }
+      commit({
+        ...dbRef.current,
+        routine_blocks: [
+          ...dbRef.current.routine_blocks,
+          { ...b, id: uid("blk"), created_at: new Date().toISOString() },
+        ],
+      });
+    },
+    [commit, wt, reload],
+  );
+
+  const updateRoutineBlock = useCallback(
+    (id: string, patch: Partial<RoutineBlock>) => {
+      commit({
+        ...dbRef.current,
+        routine_blocks: dbRef.current.routine_blocks.map((b) =>
+          b.id === id ? { ...b, ...patch } : b,
+        ),
+      });
+      wt((sb, u) => repo.updateRoutineBlock(sb!, u, id, patch));
+    },
+    [commit, wt],
+  );
+
+  const deleteRoutineBlock = useCallback(
+    (id: string) => {
+      commit({
+        ...dbRef.current,
+        routine_blocks: dbRef.current.routine_blocks.filter((b) => b.id !== id),
+      });
+      wt((sb, u) => repo.deleteRoutineBlock(sb!, u, id));
+    },
+    [commit, wt],
+  );
+
+  const applyDefaultDay = useCallback(() => {
+    const base = dbRef.current;
+    const slugId = (slug: string) =>
+      base.areas.find((a) => a.slug === slug)?.id;
+    const blocks = defaultDayBlocks(slugId);
+    if (MODE === "supabase") {
+      wt(async (sb, u) => {
+        for (const b of blocks) await repo.addRoutineBlock(sb!, u, b);
+        await reload();
+      });
+      return;
+    }
+    commit({
+      ...base,
+      routine_blocks: [
+        ...base.routine_blocks,
+        ...blocks.map((b) => ({
+          ...b,
+          id: uid("blk"),
+          created_at: new Date().toISOString(),
+        })),
+      ],
+    });
+  }, [commit, wt, reload]);
+
   const value = useMemo<StoreApi>(
     () => ({
       db,
@@ -477,6 +605,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       updateTask,
       deleteTask,
       cycleTaskStatus,
+      toggleSubtask,
       addHabit,
       updateHabit,
       deleteHabit,
@@ -485,6 +614,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       snapshotScores,
       simulateHistory,
       resetDemo,
+      addRoutineBlock,
+      updateRoutineBlock,
+      deleteRoutineBlock,
+      applyDefaultDay,
     }),
     [
       db,
@@ -498,6 +631,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       updateTask,
       deleteTask,
       cycleTaskStatus,
+      toggleSubtask,
       addHabit,
       updateHabit,
       deleteHabit,
@@ -506,6 +640,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       snapshotScores,
       simulateHistory,
       resetDemo,
+      addRoutineBlock,
+      updateRoutineBlock,
+      deleteRoutineBlock,
+      applyDefaultDay,
     ],
   );
 

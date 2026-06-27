@@ -1,7 +1,7 @@
 // Domain types. These mirror the planned Supabase schema 1:1 so a Supabase
 // adapter can replace the local store without changing any UI code.
 
-export type AreaSlug = "spiritual" | "wealth" | "health" | "relationship";
+export type AreaSlug = "wealth" | "health" | "relationship";
 
 export type GoalStatus = "active" | "done" | "paused";
 export type TaskStatus = "todo" | "doing" | "done";
@@ -29,6 +29,12 @@ export interface Goal {
   created_at: string;
 }
 
+export interface Subtask {
+  id: string;
+  title: string;
+  done: boolean;
+}
+
 export interface Task {
   id: string;
   area_id: string;
@@ -40,8 +46,23 @@ export interface Task {
   due_date?: string | null;
   scheduled_start?: string | null;
   scheduled_end?: string | null;
+  subtasks?: Subtask[];
   google_event_id?: string | null;
   last_synced_at?: string | null;
+  created_at: string;
+}
+
+// A reusable block of the user's "normal working day" — the Daily Blueprint.
+// Provides a base to refine over time and a fallback for "what to do now"
+// when nothing specific is scheduled.
+export interface RoutineBlock {
+  id: string;
+  title: string;
+  start_time: string; // "HH:MM"
+  end_time?: string | null; // "HH:MM"
+  area_id?: string | null;
+  note?: string | null;
+  sort_order: number;
   created_at: string;
 }
 
@@ -89,4 +110,5 @@ export interface DB {
   habit_logs: HabitLog[];
   area_scores: AreaScore[];
   reviews: Review[];
+  routine_blocks: RoutineBlock[];
 }

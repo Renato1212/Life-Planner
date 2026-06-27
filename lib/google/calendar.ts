@@ -16,7 +16,6 @@ export function getCalendarClient(refreshToken: string): calendar_v3.Calendar {
 
 // Calm per-area event colors (Google colorId palette).
 const AREA_COLOR_ID: Record<string, string> = {
-  spiritual: "1", // lavender
   wealth: "10", // basil/green
   health: "6", // tangerine
   relationship: "4", // flamingo/pink
