@@ -165,7 +165,7 @@ function RightNow() {
   const task = activeScheduledTask(db);
   const { block, upcoming } = currentRoutineBlock(db);
 
-  // Nothing set up yet → nudge to build the blueprint.
+  // No blueprint at all → nudge to build one.
   if (!task && !block && db.routine_blocks.length === 0) {
     return (
       <Link href="/routine">
@@ -186,6 +186,10 @@ function RightNow() {
       </Link>
     );
   }
+
+  // Blueprint exists but the day is over (no active/upcoming block) and nothing
+  // is scheduled → don't render an empty card.
+  if (!task && !block) return null;
 
   const label = task ? "Right now" : upcoming ? "Up next" : "Right now";
   const color = task

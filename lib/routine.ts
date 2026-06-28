@@ -12,11 +12,13 @@ function hmToMin(hm: string): number {
   return h * 60 + m;
 }
 
+// The blueprint is a daily timeline, so it always reads in chronological order
+// by start time (sort_order is only a tiebreak for blocks at the same minute).
 export function sortedBlocks(db: DB): RoutineBlock[] {
   return [...db.routine_blocks].sort(
     (a, b) =>
-      a.sort_order - b.sort_order ||
-      hmToMin(a.start_time) - hmToMin(b.start_time),
+      hmToMin(a.start_time) - hmToMin(b.start_time) ||
+      a.sort_order - b.sort_order,
   );
 }
 
