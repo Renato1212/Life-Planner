@@ -220,10 +220,28 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setNeedsAuth(false);
       setReady(true);
     })();
+    // React to sign-in/out that happen in-app (e.g. email+password), which
+    // don't reload the page the way the OAuth redirect does.
     const { data: sub } = sb.auth.onAuthStateChange(
       (_e: unknown, session: { user?: { id?: string } } | null) => {
-        userIdRef.current = session?.user?.id ?? null;
-        if (!session?.user) setNeedsAuth(true);
+        const uid = session?.user?.id ?? null;
+        userIdRef.current = uid;
+        if (uid) {
+          (async () => {
+            try {
+              await seedIfEmpty(sb, uid);
+              const fresh = await fetchAll(sb, uid);
+              if (!active) return;
+              setDb(fresh);
+              setNeedsAuth(false);
+              setReady(true);
+            } catch {
+              /* leave gate as-is on transient errors */
+            }
+          })();
+        } else {
+          setNeedsAuth(true);
+        }
       },
     );
     return () => {
