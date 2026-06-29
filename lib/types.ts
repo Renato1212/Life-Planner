@@ -62,6 +62,7 @@ export interface RoutineBlock {
   end_time?: string | null; // "HH:MM"
   area_id?: string | null;
   note?: string | null;
+  link?: string | null; // optional URL (e.g. a ClickUp doc) for how-to detail
   sort_order: number;
   created_at: string;
 }

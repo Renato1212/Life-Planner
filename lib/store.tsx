@@ -153,6 +153,7 @@ interface StoreApi {
   updateRoutineBlock: (id: string, patch: Partial<RoutineBlock>) => void;
   deleteRoutineBlock: (id: string) => void;
   applyDefaultDay: () => void;
+  restoreStarterHabits: () => void;
 }
 
 const StoreContext = createContext<StoreApi | null>(null);
@@ -250,8 +251,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Optimistic local commit (also persists in local mode).
+  // Optimistic local commit (also persists in local mode). Updates dbRef
+  // synchronously so several mutations dispatched in the same tick (e.g. a
+  // batch add) each build on the previous one instead of clobbering it.
   const commit = useCallback((next: DB) => {
+    dbRef.current = next;
     setDb(next);
     if (MODE === "local") {
       const ok = persistLocal(next);
@@ -646,6 +650,39 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     });
   }, [commit, wt, reload]);
 
+  // Re-add the default starter habits (mapped to existing areas by slug),
+  // skipping any that already exist. Works in both local and Supabase mode.
+  const restoreStarterHabits = useCallback(() => {
+    const base = dbRef.current;
+    const bySlug = (s: string) => base.areas.find((a) => a.slug === s)?.id;
+    const defaults: {
+      slug: string;
+      title: string;
+      target_time: string | null;
+    }[] = [
+      { slug: "health", title: "Sleep well", target_time: "21:30" },
+      { slug: "health", title: "Regular exercise", target_time: null },
+      { slug: "relationship", title: "Train Benjamim", target_time: null },
+    ];
+    for (const d of defaults) {
+      const areaId = bySlug(d.slug);
+      if (!areaId) continue;
+      const exists = base.habits.some(
+        (h) =>
+          h.area_id === areaId &&
+          h.title.toLowerCase() === d.title.toLowerCase(),
+      );
+      if (exists) continue;
+      addHabit({
+        area_id: areaId,
+        title: d.title,
+        cadence: "daily",
+        target_time: d.target_time,
+        active: true,
+      });
+    }
+  }, [addHabit]);
+
   const value = useMemo<StoreApi>(
     () => ({
       db,
@@ -674,6 +711,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       updateRoutineBlock,
       deleteRoutineBlock,
       applyDefaultDay,
+      restoreStarterHabits,
     }),
     [
       db,
@@ -701,6 +739,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       updateRoutineBlock,
       deleteRoutineBlock,
       applyDefaultDay,
+      restoreStarterHabits,
     ],
   );
 

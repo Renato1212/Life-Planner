@@ -7,14 +7,14 @@ import { isHabitDoneOn } from "@/lib/scoring";
 import { currentRoutineBlock, activeScheduledTask } from "@/lib/routine";
 import { todayISO, format, fmtTime } from "@/lib/date";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, Ring } from "@/components/ui";
+import { Card, Ring, Button } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { HabitRow, TaskRow } from "@/components/rows";
 import { TaskEditor, HabitEditor } from "@/components/editors";
 import type { Task, Habit } from "@/lib/types";
 
 export default function TodayPage() {
-  const { db, ready } = useStore();
+  const { db, ready, restoreStarterHabits } = useStore();
   const [taskEdit, setTaskEdit] = useState<Task | null>(null);
   const [habitEdit, setHabitEdit] = useState<Habit | null>(null);
 
@@ -91,7 +91,16 @@ export default function TodayPage() {
           })}
         </Card>
       ) : (
-        <EmptyMini text="No habits yet." />
+        <Card className="px-4 py-5 text-center">
+          <p className="text-[14px] text-ink-3">No habits yet.</p>
+          <Button
+            variant="secondary"
+            className="mt-3"
+            onClick={() => restoreStarterHabits()}
+          >
+            <Icon name="Repeat" size={16} /> Add starter habits
+          </Button>
+        </Card>
       )}
 
       {/* Tasks */}

@@ -23,7 +23,8 @@ type Item =
   | { kind: "habit"; t: number; habit: Habit };
 
 export default function RoutinePage() {
-  const { db, ready, applyDefaultDay, toggleHabit } = useStore();
+  const { db, ready, applyDefaultDay, toggleHabit, restoreStarterHabits } =
+    useStore();
   const [blockEditor, setBlockEditor] = useState<{
     open: boolean;
     block?: RoutineBlock | null;
@@ -105,6 +106,9 @@ export default function RoutinePage() {
             >
               <Icon name="Plus" size={18} /> Build from scratch
             </Button>
+            <Button variant="secondary" onClick={() => restoreStarterHabits()}>
+              <Icon name="Repeat" size={18} /> Add starter habits
+            </Button>
           </div>
         </Card>
       ) : (
@@ -145,10 +149,9 @@ export default function RoutinePage() {
                 const area = areaById(b.area_id);
                 const isNow = nowBlock?.id === b.id && !upcoming;
                 return (
-                  <button
+                  <div
                     key={`b-${b.id}`}
-                    onClick={() => setBlockEditor({ open: true, block: b })}
-                    className="tappable flex w-full items-stretch gap-3 py-3 text-left"
+                    className="flex w-full items-stretch gap-3 py-3"
                   >
                     <div className="w-14 shrink-0 pt-0.5 text-right text-[13px] font-semibold tabular-nums text-ink-2">
                       {fmtTime(b.start_time).replace(" ", "")}
@@ -157,7 +160,10 @@ export default function RoutinePage() {
                       className="w-1 shrink-0 rounded-full"
                       style={{ background: area?.color ?? "rgb(var(--border))" }}
                     />
-                    <div className="min-w-0 flex-1">
+                    <button
+                      onClick={() => setBlockEditor({ open: true, block: b })}
+                      className="tappable min-w-0 flex-1 text-left"
+                    >
                       <div className="flex items-center gap-2">
                         <span className="truncate text-[16px] font-medium text-ink">
                           {b.title}
@@ -173,8 +179,20 @@ export default function RoutinePage() {
                         {area ? ` · ${area.name}` : ""}
                         {b.note ? ` · ${b.note}` : ""}
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                    {b.link && (
+                      <a
+                        href={b.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Open linked doc"
+                        className="tappable active-press grid h-9 w-9 shrink-0 self-center place-items-center rounded-full bg-tint/10 text-tint"
+                      >
+                        <Icon name="Link2" size={17} />
+                      </a>
+                    )}
+                  </div>
                 );
               }
               // Timed habit
@@ -239,6 +257,31 @@ export default function RoutinePage() {
               );
             })}
           </Card>
+
+          {/* No habits yet → offer a one-tap restore */}
+          {habits.length === 0 && (
+            <Card className="mt-4 p-4">
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-tint/10 text-tint">
+                  <Icon name="Repeat" size={20} />
+                </span>
+                <div className="flex-1">
+                  <p className="text-[15px] font-semibold text-ink">
+                    No habits to link yet
+                  </p>
+                  <p className="text-[13px] text-ink-3">
+                    Add your starter habits and they&apos;ll appear in the day.
+                  </p>
+                </div>
+              </div>
+              <Button
+                className="mt-3 w-full"
+                onClick={() => restoreStarterHabits()}
+              >
+                <Icon name="Plus" size={18} /> Add starter habits
+              </Button>
+            </Card>
+          )}
 
           {/* Anytime habits (no target time) */}
           {anytimeHabits.length > 0 && (

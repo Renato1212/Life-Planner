@@ -471,6 +471,7 @@ export function RoutineBlockEditor({
   const [end, setEnd] = useState("");
   const [areaId, setAreaId] = useState<string>("");
   const [note, setNote] = useState("");
+  const [link, setLink] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -479,17 +480,21 @@ export function RoutineBlockEditor({
       setEnd(block?.end_time ?? "");
       setAreaId(block?.area_id ?? "");
       setNote(block?.note ?? "");
+      setLink(block?.link ?? "");
     }
   }, [open, block]);
 
   const save = () => {
     if (!title.trim()) return;
+    let url = link.trim();
+    if (url && !/^https?:\/\//i.test(url)) url = `https://${url}`;
     const payload = {
       title,
       start_time: start,
       end_time: end || null,
       area_id: areaId || null,
       note: note || null,
+      link: url || null,
       sort_order: block?.sort_order ?? db.routine_blocks.length,
     };
     if (block) {
@@ -566,6 +571,19 @@ export function RoutineBlockEditor({
             placeholder="e.g. Highest-focus block"
             onChange={(e) => setNote(e.target.value)}
           />
+        </Field>
+        <Field label="Link (optional)">
+          <input
+            type="url"
+            inputMode="url"
+            className={inputClass}
+            value={link}
+            placeholder="Paste a ClickUp doc / how-to URL"
+            onChange={(e) => setLink(e.target.value)}
+          />
+          <span className="mt-1 block px-1 text-[12px] text-ink-3">
+            Tap the link icon on the block to open these instructions.
+          </span>
         </Field>
         <div className="flex gap-3 pt-1">
           {block && (

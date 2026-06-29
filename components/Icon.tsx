@@ -34,6 +34,8 @@ import {
   CornerDownRight,
   GripVertical,
   ListTree,
+  Link2,
+  ExternalLink,
   type LucideIcon,
 } from "lucide-react";
 
@@ -71,6 +73,8 @@ const MAP: Record<string, LucideIcon> = {
   CornerDownRight,
   GripVertical,
   ListTree,
+  Link2,
+  ExternalLink,
 };
 
 export function Icon({
