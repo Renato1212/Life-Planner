@@ -87,9 +87,28 @@ function loadLocal(): DB {
   }
 }
 
-function persistLocal(db: DB) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+// Returns false if the write failed (e.g. Safari Private Mode, blocked storage,
+// or quota) so the UI can warn instead of silently losing data.
+function persistLocal(db: DB): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function storageWorks(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    const k = "__quadrante_test__";
+    window.localStorage.setItem(k, "1");
+    window.localStorage.removeItem(k);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function emptyDB(): DB {
@@ -111,6 +130,7 @@ interface StoreApi {
   ready: boolean;
   mode: "local" | "supabase";
   needsAuth: boolean;
+  storageOk: boolean;
   updateArea: (id: string, patch: Partial<Area>) => void;
   addGoal: (g: Omit<Goal, "id" | "created_at">) => void;
   updateGoal: (id: string, patch: Partial<Goal>) => void;
@@ -141,6 +161,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [db, setDb] = useState<DB>(() => (MODE === "local" ? buildSeed() : emptyDB()));
   const [ready, setReady] = useState(false);
   const [needsAuth, setNeedsAuth] = useState(false);
+  const [storageOk, setStorageOk] = useState(true);
   const userIdRef = useRef<string | null>(null);
   const dbRef = useRef<DB>(db);
   dbRef.current = db;
@@ -158,8 +179,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (MODE === "local") {
       setDb(loadLocal());
+      setStorageOk(storageWorks());
       setReady(true);
-      return;
+      // Keep multiple open tabs in sync and prevent a stale tab from
+      // overwriting newer data: when another tab writes, re-read it here.
+      const onStorage = (e: StorageEvent) => {
+        if (e.key === STORAGE_KEY && e.newValue) {
+          try {
+            setDb(migrate(JSON.parse(e.newValue) as DB));
+          } catch {
+            /* ignore malformed */
+          }
+        }
+      };
+      window.addEventListener("storage", onStorage);
+      return () => window.removeEventListener("storage", onStorage);
     }
     // Supabase mode
     const sb = getBrowserSupabase();
@@ -201,7 +235,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // Optimistic local commit (also persists in local mode).
   const commit = useCallback((next: DB) => {
     setDb(next);
-    if (MODE === "local") persistLocal(next);
+    if (MODE === "local") {
+      const ok = persistLocal(next);
+      setStorageOk(ok);
+    }
   }, []);
 
   // Fire-and-forget write-through for Supabase mode.
@@ -597,6 +634,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       ready,
       mode: MODE,
       needsAuth,
+      storageOk,
       updateArea,
       addGoal,
       updateGoal,
@@ -623,6 +661,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       db,
       ready,
       needsAuth,
+      storageOk,
       updateArea,
       addGoal,
       updateGoal,

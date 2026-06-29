@@ -3,6 +3,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { TabBar } from "@/components/TabBar";
 import { AuthGate } from "@/components/AuthGate";
+import { StorageWarning } from "@/components/StorageWarning";
 
 const BP = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -52,6 +53,7 @@ export default function RootLayout({
         <Providers>
           <AuthGate>
             <main className="mx-auto max-w-2xl px-4 pb-28 pt-safe">
+              <StorageWarning />
               {children}
             </main>
             <TabBar />
