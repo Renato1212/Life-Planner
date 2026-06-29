@@ -13,7 +13,10 @@ to sync two-way with Google Calendar.
 Two more building blocks:
 - **Daily Blueprint** (`/routine`) — define your "normal working day" as
   time-blocks once, refine over time; a **"Right now"** card (on Today) surfaces
-  the active block so you always know what to do when nothing is scheduled.
+  the active block so you always know what to do when nothing is scheduled. Each
+  area's **habits are linked in**: timed habits interleave into the day's
+  timeline and untimed ones list under "Anytime habits"; checking them here
+  writes the same `habit_logs` used by Today, the area pages, and scoring.
 - **Subtasks** — tasks carry an inline checklist (`task.subtasks`), checkable
   in-row and in the editor.
 
