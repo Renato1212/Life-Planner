@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card, Button, ProgressBar, inputClass, useToast } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { TrendsChart } from "@/components/TrendsChart";
+import { APP_VERSION } from "@/lib/version";
 
 export default function ReviewPage() {
   const { db, ready, saveReview, snapshotScores, simulateHistory, resetDemo } =
@@ -168,6 +169,10 @@ export default function ReviewPage() {
           </Button>
         </div>
       </div>
+
+      <p className="mt-6 text-center text-[11px] text-ink-3">
+        Quadrante · {APP_VERSION}
+      </p>
     </div>
   );
 }
